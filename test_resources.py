@@ -18,7 +18,6 @@ def run_all_in_pipeline(file_location):
 def read_and_extract_raw_text(file_location):
     unallowed_symbols = ['&', '<', '>']
     all_text = ""
-    all_body_and_title = ""
     with open(file_location) as file:
         all_text += file.read()
     split_text = all_text.split('</REUTERS>')
@@ -37,7 +36,7 @@ def read_and_extract_raw_text(file_location):
                 all_body_and_title += title[0] + ' '
             if body:
                 all_body_and_title += body[0] + ' '
-            dict_of_texts[doc_id] = all_body_and_title
+            dict_of_texts[doc_id] = [word for word in all_body_and_title.split(' ') if not string_contains_list(word, unallowed_symbols)]
     return dict_of_texts
 
 
