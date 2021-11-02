@@ -28,7 +28,7 @@ def read_and_extract_raw_text(file_location):
         if text:
             all_body_and_title = ""
             # Using regex to find the newID of the reuters collection
-            doc_id = re.findall(f'NEWID="(.*)">')
+            doc_id = re.findall(f'NEWID="(.*)">', text, flags=re.DOTALL)
             # Using REGEX to find all files between the specified tags
             # Both TITLE and BODY only occurs at specific points
             title = re.findall(f"<TITLE>(.*)</TITLE>", text, flags=re.DOTALL)
