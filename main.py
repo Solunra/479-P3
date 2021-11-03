@@ -5,9 +5,9 @@ import re
 
 def main():
     nltk.download('punkt', quiet=True)
-    allDocuments = []
+    allDocuments = {}
     for index in range(0, 22):
-        allDocuments.append(test_resources.main(f'{str(index).zfill(3)}'))
+        allDocuments.update(test_resources.main(f'{str(index).zfill(3)}'))
     vocabulary = naive_indexer(allDocuments)
     terms = ['pineapple', 'Phillippines', 'Brierley', 'Chrysler']
     for term in terms:
