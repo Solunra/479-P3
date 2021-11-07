@@ -1,40 +1,92 @@
 import test_resources
 import nltk
 import re
+import datetime
 
 
 def main():
     nltk.download('punkt', quiet=True)
     allDocuments = {}
-    for index in range(0, 22):
-        allDocuments.update(test_resources.main(f'{str(index).zfill(3)}'))
-    vocabulary = naive_indexer(allDocuments)
-    terms = ['pineapple', 'Phillippines', 'Brierley', 'Chrysler']
-    for term in terms:
-        result = single_term_query_processing(term, vocabulary)
-        with open(f'postings-of-{term}.txt', 'w+') as file:
-            file.write(', '.join([str(docId) for docId in result]))
-    lossy_compression_table(vocabulary, get_stop_words_25(), get_stop_words_126())
+
+    naive_time = 0
+    spimi_time = 0
+    # limited from 0 to 9 in order to get 10 000 docs
+    for index in range(0, 10):
+        document = test_resources.main(f'{str(index).zfill(3)}')
+        allDocuments.update(document)
+        start = datetime.datetime.now()
+        naive_indexer(allDocuments)
+        end = datetime.datetime.now()
+        naive_time = naive_time + (end.timestamp() - start.timestamp())
+
+        start = datetime.datetime.now()
+        naive_indexer_spimi(document)
+        end = datetime.datetime.now()
+        spimi_time = spimi_time + (end.timestamp() - start.timestamp())
+
+    # vocabulary = naive_indexer_spimi(allDocuments)
+
+    with open(f'time_details.txt', 'w+') as file:
+        file.write(f'naive took a total of {naive_time} ms\n')
+        file.write(f'spimi took a total of {spimi_time} ms')
+
+    # terms = ['pineapple', 'Phillippines', 'Brierley', 'Chrysler']
+    # for term in terms:
+    #     result = single_term_query_processing(term, vocabulary)
+    #     with open(f'postings-of-{term}.txt', 'w+') as file:
+    #         file.write(', '.join([str(docId) for docId in result]))
+    # lossy_compression_table(vocabulary, get_stop_words_25(), get_stop_words_126())
+
+
+naive_indexer_dictionary = {}
 
 
 # Task 1; Accepts 'Documents' as a docId -> list of tokens
 def naive_indexer(documents):
+    global naive_indexer_dictionary
+
     # save as word -> [listOf]
-    vocabularyDict = {}
+    F_list = []
+    # add to list
+    for docId, document in documents.items():
+        for token in document:
+            F_list.append((docId, token))
+
+    filtered_F_list = []
+    processed_tokens = []
+    for id, token in F_list:
+        if token not in processed_tokens:
+            filtered_F_list.append((id, token))
+            processed_tokens.append(token)
+
+    # sort into postings list
+    for id, token in filtered_F_list:
+        if token not in naive_indexer_dictionary.keys():
+            naive_indexer_dictionary[token] = [id]
+        else:
+            naive_indexer_dictionary[token].append(id)
+
+
+spimi_dictionary = {}
+
+
+# Task 1; Accepts 'Documents' as a docId -> list of tokens
+def naive_indexer_spimi(documents):
+    # save as word -> [listOf]
+    global spimi_dictionary
     # add to dictionary
     for docId, document in documents.items():
         for token in document:
-            if token not in vocabularyDict.keys():
-                vocabularyDict[token] = [docId]
+            if token not in spimi_dictionary.keys():
+                spimi_dictionary[token] = [docId]
             else:
-                if docId not in vocabularyDict[token]:
-                    vocabularyDict[token].append(docId)
+                if docId not in spimi_dictionary[token]:
+                    spimi_dictionary[token].append(docId)
 
     # sort dictionary values
-    for key, value in vocabularyDict.items():
+    for key, value in spimi_dictionary.items():
         value.sort()
-        vocabularyDict[key] = value
-    return vocabularyDict
+        spimi_dictionary[key] = value
 
 
 # Task 2; Assume query is a singular term, vocabulary as the same as Task 1's return
