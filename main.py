@@ -1,7 +1,12 @@
+import math
+
 import test_resources
 import nltk
 import re
 import datetime
+
+
+average_document_length = 0
 
 
 def main():
@@ -15,22 +20,58 @@ def main():
         document = test_resources.main(f'{str(index).zfill(3)}')
         allDocuments.update(document)
         # Uncomment for time
-        start = datetime.datetime.now()
-        naive_indexer(document)
-        end = datetime.datetime.now()
-        naive_time = naive_time + (end.timestamp() - start.timestamp())
+        # start = datetime.datetime.now()
+        # naive_indexer(document)
+        # end = datetime.datetime.now()
+        # naive_time = naive_time + (end.timestamp() - start.timestamp())
 
         start = datetime.datetime.now()
         naive_indexer_spimi(document)
         end = datetime.datetime.now()
         spimi_time = spimi_time + (end.timestamp() - start.timestamp())
+        generate_document_frequency(document)
 
-    with open(f'time_details.txt', 'w+') as file:
-        file.write(f'naive took a total of {naive_time} ms\n')
-        file.write(f'spimi took a total of {spimi_time} ms')
+    global average_document_length
+    total = 0
+    count = 0
+    for _, tokens in allDocuments:
+        total = total + len(tokens)
+        count = count + 1
+    average_document_length = total/count
 
+    # with open(f'time_details.txt', 'w+') as file:
+    #     file.write(f'naive took a total of {naive_time} ms\n')
+    #     file.write(f'spimi took a total of {spimi_time} ms')
+
+    # Similar to SubProject 1, both are done with no compression techniques
     global spimi_dictionary
-    processed_vocabulary = lossy_compression_table(spimi_dictionary, get_stop_words_25(), get_stop_words_126())
+    global document_frequency
+
+
+# equations taken from https://en.wikipedia.org/wiki/Okapi_BM25
+def bm25_query_processing(query, all_documents, dictionary, document_frequency, k_one, b):
+    global average_document_length
+    list_of_terms = query.split(' ')
+    score = {}
+    for term in list_of_terms:
+        if dictionary[term] is not None:
+            for docId in dictionary[term]:
+                # calculate idf here
+                term_idf = calculate_idf(term, dictionary)
+                bm_numerator = document_frequency[term][docId] * (k_one + 1)
+                bm_denominator = document_frequency[term][docId] + k_one * (1 - b + (b * (len(all_documents[docId]) / average_document_length)))
+                if docId not in score.keys():
+                    score[docId] = term_idf * bm_numerator / bm_denominator
+                else:
+                    score[docId] = score[docId] + (term_idf * bm_numerator / bm_denominator)
+
+
+
+def calculate_idf(query_term, dictionary):
+    global count_of_documents
+    numerator = count_of_documents - len(dictionary[query_term]) + 0.5
+    denominator = len(dictionary[query_term]) + 0.5
+    return math.log((numerator/denominator) + 1)
 
 
 naive_indexer_dictionary = {}
@@ -63,14 +104,17 @@ def naive_indexer(documents):
 
 
 spimi_dictionary = {}
+count_of_documents = 0
 
 
 # Task 1; Accepts 'Documents' as a docId -> list of tokens
 def naive_indexer_spimi(documents):
     # save as word -> [listOf]
     global spimi_dictionary
+    global count_of_documents
     # add to dictionary
     for docId, document in documents.items():
+        count_of_documents = count_of_documents + 1
         for token in document:
             if token not in spimi_dictionary.keys():
                 spimi_dictionary[token] = [docId]
@@ -82,6 +126,23 @@ def naive_indexer_spimi(documents):
     for key, value in spimi_dictionary.items():
         value.sort()
         spimi_dictionary[key] = value
+
+
+document_frequency = {}
+
+
+# Creates a list of documents and term frequency using positions
+def generate_document_frequency(documents):
+    global document_frequency
+    for docId, document in documents.items():
+        for token in document:
+            if token not in document_frequency.keys():
+                document_frequency[token] = {docId: 1}
+            else:
+                if docId not in document_frequency[token]:
+                    document_frequency[token][docId] = 1
+                else:
+                    document_frequency[token][docId] = document_frequency[token][docId] + 1
 
 
 # Task 2; Assume query is a singular term, vocabulary as the same as Task 1's return
