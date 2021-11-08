@@ -15,7 +15,7 @@ def main():
         document = test_resources.main(f'{str(index).zfill(3)}')
         allDocuments.update(document)
         start = datetime.datetime.now()
-        naive_indexer(allDocuments)
+        naive_indexer(document)
         end = datetime.datetime.now()
         naive_time = naive_time + (end.timestamp() - start.timestamp())
 
