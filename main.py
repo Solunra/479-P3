@@ -14,6 +14,7 @@ def main():
     for index in range(0, 10):
         document = test_resources.main(f'{str(index).zfill(3)}')
         allDocuments.update(document)
+        # Uncomment for time
         start = datetime.datetime.now()
         naive_indexer(document)
         end = datetime.datetime.now()
@@ -24,18 +25,12 @@ def main():
         end = datetime.datetime.now()
         spimi_time = spimi_time + (end.timestamp() - start.timestamp())
 
-    # vocabulary = naive_indexer_spimi(allDocuments)
-
     with open(f'time_details.txt', 'w+') as file:
         file.write(f'naive took a total of {naive_time} ms\n')
         file.write(f'spimi took a total of {spimi_time} ms')
 
-    # terms = ['pineapple', 'Phillippines', 'Brierley', 'Chrysler']
-    # for term in terms:
-    #     result = single_term_query_processing(term, vocabulary)
-    #     with open(f'postings-of-{term}.txt', 'w+') as file:
-    #         file.write(', '.join([str(docId) for docId in result]))
-    # lossy_compression_table(vocabulary, get_stop_words_25(), get_stop_words_126())
+    global spimi_dictionary
+    processed_vocabulary = lossy_compression_table(spimi_dictionary, get_stop_words_25(), get_stop_words_126())
 
 
 naive_indexer_dictionary = {}
@@ -125,48 +120,7 @@ def lossy_compression_table(vocabulary, stop_words_small, stop_words_big):
             other_tokens = stop_word_filtered_tokens_126[token]
             if current_tokens is not None and other_tokens is not None:
                 stemmed_tokens[stemmed_token] = list(set(current_tokens).union(set(other_tokens)))
-    # counting for postings size
-    unfiltered_postings_size = 0
-    for postings in vocabulary:
-        unfiltered_postings_size = unfiltered_postings_size + len(postings)
-    no_numbers_tokens_postings_size = 0
-    for postings in no_numbers_tokens:
-        no_numbers_tokens_postings_size = no_numbers_tokens_postings_size + len(postings)
-    case_folded_tokens_postings_size = 0
-    for postings in case_folded_tokens:
-        case_folded_tokens_postings_size = case_folded_tokens_postings_size + len(postings)
-    stop_word_filtered_tokens_postings_size_25 = 0
-    for postings in stop_word_filtered_tokens_25:
-        stop_word_filtered_tokens_postings_size_25 = stop_word_filtered_tokens_postings_size_25 + len(postings)
-    stop_word_filtered_tokens_postings_size_126 = 0
-    for postings in stop_word_filtered_tokens_126:
-        stop_word_filtered_tokens_postings_size_126 = stop_word_filtered_tokens_postings_size_126 + len(postings)
-    stemmed_tokens_postings_size = 0
-    for postings in stemmed_tokens:
-        stemmed_tokens_postings_size = stemmed_tokens_postings_size + len(postings)
-
-    with open(f'./table-results.txt', 'w+') as file:
-        file.write(f'               |      distinct terms       |\n')
-        file.write(f'               |===========================|\n')
-        file.write(f'               | number | delta % | term % |\n')
-        file.write(f'               |===========================|\n')
-        file.write(f'unfiltered     |{str(len(vocabulary)):8}|    -    |   -    |\n')
-        file.write(f'no numbers     |{str(len(no_numbers_tokens)):8}|{(100 * (len(no_numbers_tokens) - len(vocabulary)) / len(vocabulary)):3.6f}|{(100 * (len(no_numbers_tokens) - len(vocabulary)) / len(vocabulary)):3.5f}|\n')
-        file.write(f'case folding   |{str(len(case_folded_tokens)):8}|{(100*(len(case_folded_tokens)-len(no_numbers_tokens))/len(no_numbers_tokens)):3.6f}|{(100 * (len(case_folded_tokens) - len(vocabulary)) / len(vocabulary)):3.5f}|\n')
-        file.write(f'25 stop words  |{str(len(stop_word_filtered_tokens_25)):8}|{(100*(len(stop_word_filtered_tokens_25)-len(case_folded_tokens))/len(case_folded_tokens)):3.6f}|{(100 * (len(stop_word_filtered_tokens_25) - len(vocabulary)) / len(vocabulary)):3.5f}|\n')
-        file.write(f'126 stop words |{str(len(stop_word_filtered_tokens_126)):8}|{(100*(len(stop_word_filtered_tokens_126)-len(stop_word_filtered_tokens_25))/len(stop_word_filtered_tokens_25)):3.6f}|{(100 * (len(stop_word_filtered_tokens_126) - len(vocabulary)) / len(vocabulary)):3.5f}|\n')
-        file.write(f'stemming       |{str(len(stemmed_tokens)):8}|{(100*(len(stemmed_tokens)-len(stop_word_filtered_tokens_126))/len(stop_word_filtered_tokens_126)):3.6f}|{(100 * (len(stemmed_tokens) - len(vocabulary)) / len(vocabulary)):3.5f}|\n')
-        file.write(f'\n\n')
-        file.write(f'               |             postings list size              |\n')
-        file.write(f'               |=============================================|\n')
-        file.write(f'               |    number    |    delta %    |    size %    |\n')
-        file.write(f'               |=============================================|\n')
-        file.write(f'unfiltered     |{str(unfiltered_postings_size):14}|       -       |      -       |\n')
-        file.write(f'no numbers     |{str(no_numbers_tokens_postings_size):14}|{(100*(no_numbers_tokens_postings_size-unfiltered_postings_size)/unfiltered_postings_size):3.12f}|{(100*(no_numbers_tokens_postings_size-unfiltered_postings_size)/unfiltered_postings_size):3.11f}|\n')
-        file.write(f'case folding   |{str(case_folded_tokens_postings_size):14}|{(100*(case_folded_tokens_postings_size-no_numbers_tokens_postings_size)/no_numbers_tokens_postings_size):3.12f}|{(100*(case_folded_tokens_postings_size-unfiltered_postings_size)/unfiltered_postings_size):3.11f}|\n')
-        file.write(f'25 stop words  |{str(stop_word_filtered_tokens_postings_size_25):14}|{(100*(stop_word_filtered_tokens_postings_size_25-case_folded_tokens_postings_size)/case_folded_tokens_postings_size):3.12f}|{(100*(stop_word_filtered_tokens_postings_size_25-unfiltered_postings_size)/unfiltered_postings_size):3.11f}|\n')
-        file.write(f'126 stop words |{str(stop_word_filtered_tokens_postings_size_126):14}|{(100*(stop_word_filtered_tokens_postings_size_126-stop_word_filtered_tokens_postings_size_25)/stop_word_filtered_tokens_postings_size_25):3.12f}|{(100*(stop_word_filtered_tokens_postings_size_126-unfiltered_postings_size)/unfiltered_postings_size):3.11f}|\n')
-        file.write(f'stemming       |{str(stemmed_tokens_postings_size):14}|{(100*(stemmed_tokens_postings_size-stop_word_filtered_tokens_postings_size_126)/stop_word_filtered_tokens_postings_size_126):3.12f}|{(100*(stemmed_tokens_postings_size-unfiltered_postings_size)/unfiltered_postings_size):3.11f}|\n')
+    return stemmed_tokens
 
 
 def get_stop_words_126():
