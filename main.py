@@ -18,7 +18,7 @@ def main():
     for index in range(0, 10):
         document = test_resources.main(f'{str(index).zfill(3)}')
         allDocuments.update(document)
-        # Uncomment for time
+        # Uncomment for time values
         # start = datetime.datetime.now()
         # naive_indexer(document)
         # end = datetime.datetime.now()
