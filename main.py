@@ -1,5 +1,4 @@
 import math
-
 import test_resources
 import nltk
 import re
@@ -31,13 +30,7 @@ def main():
         spimi_time = spimi_time + (end.timestamp() - start.timestamp())
         generate_document_frequency(document)
 
-    global average_document_length
-    total = 0
-    count = 0
-    for _, tokens in allDocuments:
-        total = total + len(tokens)
-        count = count + 1
-    average_document_length = total/count
+    get_document_frequency(allDocuments)
 
     # with open(f'time_details.txt', 'w+') as file:
     #     file.write(f'naive took a total of {naive_time} ms\n')
@@ -46,31 +39,45 @@ def main():
     # Similar to SubProject 1, both are done with no compression techniques
     global spimi_dictionary
     global document_frequency
+    score = bm25_query_processing('Democrats’ welfare and healthcare reform policies', allDocuments, spimi_dictionary, document_frequency)
+    with open('./scores.txt', 'w+') as file:
+        for doc_id, doc_score in score.items():
+            file.write(f'{doc_id}\'s score: {doc_score} \n')
 
 
-# equations taken from https://en.wikipedia.org/wiki/Okapi_BM25
-def bm25_query_processing(query, all_documents, dictionary, document_frequency, k_one, b):
+def get_document_frequency(all_documents):
+    global average_document_length
+    total = 0
+    count = 0
+    for _, tokens in all_documents.items():
+        total = total + len(tokens)
+        count = count + 1
+    average_document_length = total / count
+
+
+# equations taken from https://nlp.stanford.edu/IR-book/pdf/11prob.pdf 11.32's equation
+def bm25_query_processing(query, all_documents, dictionary, doc_frequency, k_one=1.2, b=0.75):
     global average_document_length
     list_of_terms = query.split(' ')
     score = {}
     for term in list_of_terms:
-        if dictionary[term] is not None:
+        if dictionary.get(term, None) is not None:
             for docId in dictionary[term]:
                 # calculate idf here
                 term_idf = calculate_idf(term, dictionary)
-                bm_numerator = document_frequency[term][docId] * (k_one + 1)
-                bm_denominator = document_frequency[term][docId] + k_one * (1 - b + (b * (len(all_documents[docId]) / average_document_length)))
+                bm_numerator = doc_frequency[term][docId] * (k_one + 1)
+                bm_denominator = doc_frequency[term][docId] + k_one * ((1 - b) + (b * (len(all_documents[docId]) / average_document_length)))
                 if docId not in score.keys():
                     score[docId] = term_idf * bm_numerator / bm_denominator
                 else:
                     score[docId] = score[docId] + (term_idf * bm_numerator / bm_denominator)
-
+    return score
 
 
 def calculate_idf(query_term, dictionary):
     global count_of_documents
-    numerator = count_of_documents - len(dictionary[query_term]) + 0.5
-    denominator = len(dictionary[query_term]) + 0.5
+    numerator = count_of_documents
+    denominator = len(dictionary[query_term])
     return math.log((numerator/denominator) + 1)
 
 
