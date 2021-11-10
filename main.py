@@ -19,16 +19,15 @@ def main():
         document = test_resources.main(f'{str(index).zfill(3)}')
         allDocuments.update(document)
         # Uncomment for time value
-        # start = datetime.datetime.now()
-        # naive_indexer(document)
-        # end = datetime.datetime.now()
-        # naive_time = naive_time + (end.timestamp() - start.timestamp())
+        start = datetime.datetime.now()
+        naive_indexer(document)
+        end = datetime.datetime.now()
+        naive_time = naive_time + (end.timestamp() - start.timestamp())
 
         start = datetime.datetime.now()
         naive_indexer_spimi(document)
         end = datetime.datetime.now()
         spimi_time = spimi_time + (end.timestamp() - start.timestamp())
-        generate_document_frequency(document)
 
     get_document_frequency(allDocuments)
 
@@ -64,7 +63,7 @@ def bm25_query_processing(query, all_documents, dictionary, doc_frequency, k_one
         if dictionary.get(term, None) is not None:
             for docId in dictionary[term]:
                 # calculate idf here
-                term_idf = calculate_idf(term, dictionary)
+                term_idf = math.log((count_of_documents/len(dictionary[term])))
                 bm_numerator = doc_frequency[term][docId] * (k_one + 1)
                 bm_denominator = doc_frequency[term][docId] + k_one * ((1 - b) + (b * (len(all_documents[docId]) / average_document_length)))
                 if docId not in score.keys():
@@ -72,13 +71,6 @@ def bm25_query_processing(query, all_documents, dictionary, doc_frequency, k_one
                 else:
                     score[docId] = score[docId] + (term_idf * bm_numerator / bm_denominator)
     return score
-
-
-def calculate_idf(query_term, dictionary):
-    global count_of_documents
-    numerator = count_of_documents
-    denominator = len(dictionary[query_term])
-    return math.log((numerator/denominator) + 1)
 
 
 naive_indexer_dictionary = {}
@@ -104,6 +96,7 @@ def naive_indexer(documents):
 
     # sort into postings list
     for id, token in filtered_F_list:
+
         if token not in naive_indexer_dictionary.keys():
             naive_indexer_dictionary[token] = [id]
         else:
