@@ -113,6 +113,8 @@ def naive_indexer(documents, timed=False):
 
     # sort into postings list
     for id, token in filtered_F_list:
+        if count == 10000 and timed:
+            return
         if token not in naive_indexer_dictionary.keys():
             naive_indexer_dictionary[token] = [id]
             count = count + 1
@@ -139,7 +141,7 @@ def naive_indexer_spimi(documents, timed=False):
     for docId, document in documents.items():
         count_of_documents = count_of_documents + 1
         for token in document:
-            if len(spimi_dictionary) == 10000:
+            if len(spimi_dictionary) == 10000 and timed:
                 return
             if token not in spimi_dictionary.keys():
                 spimi_dictionary[token] = [docId]
