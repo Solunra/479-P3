@@ -19,30 +19,73 @@ def main():
         document = test_resources.main(f'{str(index).zfill(3)}')
         allDocuments.update(document)
         # Uncomment for time value
-        # start = datetime.datetime.now()
-        # naive_indexer(document, timed=True)
-        # end = datetime.datetime.now()
-        # naive_time = naive_time + (end.timestamp() - start.timestamp())
-        #
-        # start = datetime.datetime.now()
-        # naive_indexer_spimi(document, timed=True)
-        # end = datetime.datetime.now()
-        # spimi_time = spimi_time + (end.timestamp() - start.timestamp())
+        start = datetime.datetime.now()
+        naive_indexer(document, timed=True)
+        end = datetime.datetime.now()
+        naive_time = naive_time + (end.timestamp() - start.timestamp())
+
+        start = datetime.datetime.now()
+        naive_indexer_spimi(document, timed=True)
+        end = datetime.datetime.now()
+        spimi_time = spimi_time + (end.timestamp() - start.timestamp())
 
     get_document_frequency(allDocuments)
     generate_document_frequency(allDocuments)
     global spimi_dictionary
     spimi_dictionary = {}
     naive_indexer_spimi(allDocuments)
+    global naive_indexer_dictionary
+    naive_indexer_dictionary = {}
+    naive_indexer(allDocuments)
 
-    # with open(f'./results/time_details.txt', 'w+') as file:
-    #     file.write(f'naive took a total of {naive_time} ms\n')
-    #     file.write(f'spimi took a total of {spimi_time} ms')
+    with open(f'./results/time_details.txt', 'w+') as file:
+        file.write(f'naive took a total of {naive_time} ms\n')
+        file.write(f'spimi took a total of {spimi_time} ms')
 
     # Similar to SubProject 1, both are done with no compression techniques
     queries = ['Democrats’ welfare and healthcare reform policies', 'Drug company bankruptcies', 'George Bush']
     for index, query in enumerate(queries):
         get_ranked_list(allDocuments, spimi_dictionary, query, index)
+
+    # Test Queries
+    # Single term
+    single_term = 'President'
+    spimi_single_result = single_term_query_processing(single_term, spimi_dictionary)
+    naive_single_result = single_term_query_processing(single_term, naive_indexer_dictionary)
+    with open(f'./results/single_term_results.txt', 'w+') as file:
+        file.write('SPIMI-Based: \n')
+        file.write(', '.join(spimi_single_result))
+        file.write('\n\n Naive-Based:\n')
+        file.write(', '.join(naive_single_result))
+
+    # BM25
+    bm25_query = 'aluminium government contract'
+    get_ranked_list(allDocuments, spimi_dictionary, bm25_query, 'test')
+
+    keyword_query = 'aluminium government contract'
+    # Multiple Keywords (AND)
+    and_result = query_processing_with_boolean_logic(spimi_dictionary, keyword_query, use_and=True)
+    with open(f'./results/logical_and_results.txt', 'w+') as file:
+        file.write(', '.join(and_result))
+
+    # Multiple Keywords (OR)
+    or_result = query_processing_with_boolean_logic(spimi_dictionary, keyword_query, use_and=False)
+    with open(f'./results/logical_or_results.txt', 'w+') as file:
+        file.write(', '.join(or_result))
+
+
+def query_processing_with_boolean_logic(dictionary, query, use_and=True):
+    list_of_query_terms = query.split(' ')
+    list_of_doc_ids = []
+    for query_term in list_of_query_terms:
+        list_of_doc_ids.append(dictionary[query_term])
+    results = set([])
+    for doc_ids in list_of_doc_ids:
+        if use_and:
+            results = results.intersection(set(doc_ids))
+        else:
+            results = results.union(set(doc_ids))
+    return results
 
 
 def get_ranked_list(allDocuments, spimi_dictionary, query, index):
@@ -110,6 +153,9 @@ def naive_indexer(documents, timed=False):
         if token not in processed_tokens:
             filtered_F_list.append((id, token))
             processed_tokens.append(token)
+
+    # taken and adapted from https://stackoverflow.com/questions/59687010/python-sort-list-consisting-of-int-string-pairs-descending-by-int-and-ascend
+    sorted(filtered_F_list, key=lambda x: x[1])
 
     # sort into postings list
     for id, token in filtered_F_list:
