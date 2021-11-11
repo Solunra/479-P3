@@ -19,29 +19,43 @@ def main():
         document = test_resources.main(f'{str(index).zfill(3)}')
         allDocuments.update(document)
         # Uncomment for time value
-        start = datetime.datetime.now()
-        naive_indexer(document)
-        end = datetime.datetime.now()
-        naive_time = naive_time + (end.timestamp() - start.timestamp())
-
-        start = datetime.datetime.now()
-        naive_indexer_spimi(document)
-        end = datetime.datetime.now()
-        spimi_time = spimi_time + (end.timestamp() - start.timestamp())
+        # start = datetime.datetime.now()
+        # naive_indexer(document, timed=True)
+        # end = datetime.datetime.now()
+        # naive_time = naive_time + (end.timestamp() - start.timestamp())
+        #
+        # start = datetime.datetime.now()
+        # naive_indexer_spimi(document, timed=True)
+        # end = datetime.datetime.now()
+        # spimi_time = spimi_time + (end.timestamp() - start.timestamp())
 
     get_document_frequency(allDocuments)
+    generate_document_frequency(allDocuments)
+    global spimi_dictionary
+    spimi_dictionary = {}
+    naive_indexer_spimi(allDocuments)
 
-    # with open(f'time_details.txt', 'w+') as file:
+    # with open(f'./results/time_details.txt', 'w+') as file:
     #     file.write(f'naive took a total of {naive_time} ms\n')
     #     file.write(f'spimi took a total of {spimi_time} ms')
 
     # Similar to SubProject 1, both are done with no compression techniques
-    global spimi_dictionary
+    queries = ['Democrats’ welfare and healthcare reform policies', 'Drug company bankruptcies', 'George Bush']
+    for index, query in enumerate(queries):
+        get_ranked_list(allDocuments, spimi_dictionary, query, index)
+
+
+def get_ranked_list(allDocuments, spimi_dictionary, query, index):
     global document_frequency
-    score = bm25_query_processing('Democrats’ welfare and healthcare reform policies', allDocuments, spimi_dictionary, document_frequency)
-    with open('./scores.txt', 'w+') as file:
-        for doc_id, doc_score in score.items():
-            file.write(f'{doc_id}\'s score: {doc_score} \n')
+    score = bm25_query_processing(query, allDocuments, spimi_dictionary, document_frequency)
+    # sorting from https://stackoverflow.com/questions/613183/how-do-i-sort-a-dictionary-by-value
+    sorted_scores = {key: value for key, value in sorted(score.items(), key=lambda item: item[1], reverse=True)}
+    with open(f'./results/scores-{index}.txt', 'w+') as file:
+        file.write(f'For query: {query}\n')
+        file.write(f'[ \n')
+        for doc_id, doc_score in sorted_scores.items():
+            file.write(f'{doc_id}, \n')
+        file.write(f' ]')
 
 
 def get_document_frequency(all_documents):
@@ -77,8 +91,11 @@ naive_indexer_dictionary = {}
 
 
 # Task 1; Accepts 'Documents' as a docId -> list of tokens
-def naive_indexer(documents):
+def naive_indexer(documents, timed=False):
     global naive_indexer_dictionary
+    count = 0
+    if count == 10000 and timed:
+        return
 
     # save as word -> [listOf]
     F_list = []
@@ -96,11 +113,13 @@ def naive_indexer(documents):
 
     # sort into postings list
     for id, token in filtered_F_list:
-
         if token not in naive_indexer_dictionary.keys():
             naive_indexer_dictionary[token] = [id]
+            count = count + 1
         else:
-            naive_indexer_dictionary[token].append(id)
+            if id not in naive_indexer_dictionary[token]:
+                naive_indexer_dictionary[token].append(id)
+                count = count + 1
 
 
 spimi_dictionary = {}
@@ -108,19 +127,27 @@ count_of_documents = 0
 
 
 # Task 1; Accepts 'Documents' as a docId -> list of tokens
-def naive_indexer_spimi(documents):
+def naive_indexer_spimi(documents, timed=False):
     # save as word -> [listOf]
     global spimi_dictionary
     global count_of_documents
+    count = 0
+    if count == 10000 and timed:
+        return
+
     # add to dictionary
     for docId, document in documents.items():
         count_of_documents = count_of_documents + 1
         for token in document:
+            if len(spimi_dictionary) == 10000:
+                return
             if token not in spimi_dictionary.keys():
                 spimi_dictionary[token] = [docId]
+                count = count + 1
             else:
                 if docId not in spimi_dictionary[token]:
                     spimi_dictionary[token].append(docId)
+                    count = count + 1
 
     # sort dictionary values
     for key, value in spimi_dictionary.items():
