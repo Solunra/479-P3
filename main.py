@@ -18,14 +18,14 @@ def main():
     nltk.download('punkt', quiet=True)
 
     # Generates timing for naive and spimi
-    # print(f'Starting Subproject 1')
-    # subproject_1()
+    print(f'Starting Subproject 1')
+    subproject_1()
 
     print(f'Starting Subproject 2')
     subproject_2()
 
-    # print(f'Starting Subproject 2_term_comparison')
-    # subproject_2_single_term_comparison()
+    print(f'Starting Subproject 2_term_comparison')
+    subproject_2_single_term_comparison()
 
 
 def subproject_2():
