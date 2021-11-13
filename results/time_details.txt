@@ -1,2 +1,2 @@
-naive took a total of 51.59917426109314 ms
-spimi took a total of 0.08802008628845215 ms
+naive took a total of 136.57413697242737 s
+spimi took a total of 0.08265495300292969 s

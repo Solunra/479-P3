@@ -1,24 +1,106 @@
 import math
 import test_resources
 import nltk
-import re
 import datetime
 
 
+# all global variables
 average_document_length = 0
+count_for_naive = 0
+count_for_spimi = 0
+naive_indexer_dictionary = {}
+spimi_dictionary = {}
+count_of_documents = 0
+document_frequency = {}
 
 
 def main():
     nltk.download('punkt', quiet=True)
+
+    # Generates timing for naive and spimi
+    # print(f'Starting Subproject 1')
+    # subproject_1()
+
+    print(f'Starting Subproject 2')
+    subproject_2()
+
+    # print(f'Starting Subproject 2_term_comparison')
+    # subproject_2_single_term_comparison()
+
+
+def subproject_2():
+    global spimi_dictionary
+    spimi_dictionary = {}
+    global naive_indexer_dictionary
+    naive_indexer_dictionary = {}
+
     allDocuments = {}
+    for index in range(0, 22):
+        document = test_resources.main(f'{str(index).zfill(3)}')
+        allDocuments.update(document)
+        naive_indexer_spimi(document)
+    # Resets and gets the whole corpus into the dictionary
+    get_document_frequency(allDocuments)
+    generate_document_frequency(allDocuments)
+    # Similar to SubProject 1, both are done with no compression techniques
+    queries = ['Democrats’ welfare and healthcare reform policies', 'Drug company bankruptcies', 'George Bush']
+    for index, query in enumerate(queries):
+        get_ranked_list(allDocuments, spimi_dictionary, query, index)
+    # Test Queries
+    # BM25
+    bm25_query = 'Shultz soybeans sales'
+    b_values = [0.75, 0.5, 0.25]
+    k1_values = [1.25, 1.5, 2]
+    count = 0
+    for b in b_values:
+        for k1 in k1_values:
+            get_ranked_list(allDocuments, spimi_dictionary, bm25_query, f'test-{count}', k_one=k1, b=b)
+            count = count + 1
+
+    # Multiple Keywords (AND)
+    keyword_query = 'major mortgage lenders declined'
+    and_result = query_processing_with_boolean_logic(spimi_dictionary, keyword_query, use_and=True)
+    with open(f'./results/logical_and_results.txt', 'w+') as file:
+        file.write(', '.join(and_result))
+    # Multiple Keywords (OR)
+    or_result = query_processing_with_boolean_logic(spimi_dictionary, keyword_query, use_and=False)
+    with open(f'./results/logical_or_results.txt', 'w+') as file:
+        file.write(', '.join(or_result))
+
+
+def subproject_2_single_term_comparison():
+    global spimi_dictionary
+    spimi_dictionary = {}
+    global naive_indexer_dictionary
+    naive_indexer_dictionary = {}
+
+    for index in range(0, 5):
+        document = test_resources.main(f'{str(index).zfill(3)}')
+        naive_indexer(document)
+        naive_indexer_spimi(document)
+    # Test Queries
+    # Single term
+    single_term = 'President'
+    spimi_single_result = single_term_query_processing(single_term, spimi_dictionary)
+    naive_single_result = single_term_query_processing(single_term, naive_indexer_dictionary)
+    with open(f'./results/single_term_results.txt', 'w+') as file:
+        file.write('SPIMI-Based: \n')
+        file.write(', '.join(spimi_single_result))
+        file.write('\n\nNaive-Based:\n')
+        file.write(', '.join(naive_single_result))
+
+
+def subproject_1():
+    global spimi_dictionary
+    spimi_dictionary = {}
+    global naive_indexer_dictionary
+    naive_indexer_dictionary = {}
 
     naive_time = 0
     spimi_time = 0
-    # limited from 0 to 9 in order to get 10 000 docs
-    for index in range(0, 10):
+    for index in range(0, 22):
         document = test_resources.main(f'{str(index).zfill(3)}')
-        allDocuments.update(document)
-        # Uncomment for time value
+        # Gets time value for both indexing
         start = datetime.datetime.now()
         naive_indexer(document, timed=True)
         end = datetime.datetime.now()
@@ -29,72 +111,35 @@ def main():
         end = datetime.datetime.now()
         spimi_time = spimi_time + (end.timestamp() - start.timestamp())
 
-    get_document_frequency(allDocuments)
-    generate_document_frequency(allDocuments)
-    global spimi_dictionary
-    spimi_dictionary = {}
-    naive_indexer_spimi(allDocuments)
-    global naive_indexer_dictionary
-    naive_indexer_dictionary = {}
-    naive_indexer(allDocuments)
-
     with open(f'./results/time_details.txt', 'w+') as file:
-        file.write(f'naive took a total of {naive_time} ms\n')
-        file.write(f'spimi took a total of {spimi_time} ms')
-
-    # Similar to SubProject 1, both are done with no compression techniques
-    queries = ['Democrats’ welfare and healthcare reform policies', 'Drug company bankruptcies', 'George Bush']
-    for index, query in enumerate(queries):
-        get_ranked_list(allDocuments, spimi_dictionary, query, index)
-
-    # Test Queries
-    # Single term
-    single_term = 'President'
-    spimi_single_result = single_term_query_processing(single_term, spimi_dictionary)
-    naive_single_result = single_term_query_processing(single_term, naive_indexer_dictionary)
-    with open(f'./results/single_term_results.txt', 'w+') as file:
-        file.write('SPIMI-Based: \n')
-        file.write(', '.join(spimi_single_result))
-        file.write('\n\n Naive-Based:\n')
-        file.write(', '.join(naive_single_result))
-
-    # BM25
-    bm25_query = 'aluminium government contract'
-    get_ranked_list(allDocuments, spimi_dictionary, bm25_query, 'test')
-
-    keyword_query = 'aluminium government contract'
-    # Multiple Keywords (AND)
-    and_result = query_processing_with_boolean_logic(spimi_dictionary, keyword_query, use_and=True)
-    with open(f'./results/logical_and_results.txt', 'w+') as file:
-        file.write(', '.join(and_result))
-
-    # Multiple Keywords (OR)
-    or_result = query_processing_with_boolean_logic(spimi_dictionary, keyword_query, use_and=False)
-    with open(f'./results/logical_or_results.txt', 'w+') as file:
-        file.write(', '.join(or_result))
+        file.write(f'naive took a total of {naive_time} s\n')
+        file.write(f'spimi took a total of {spimi_time} s')
 
 
+# processes boolean logic here
 def query_processing_with_boolean_logic(dictionary, query, use_and=True):
     list_of_query_terms = query.split(' ')
     list_of_doc_ids = []
     for query_term in list_of_query_terms:
         list_of_doc_ids.append(dictionary[query_term])
-    results = set([])
+    results = set(list_of_doc_ids.pop())
     for doc_ids in list_of_doc_ids:
         if use_and:
-            results = results.intersection(set(doc_ids))
+            results = results.intersection(doc_ids)
         else:
-            results = results.union(set(doc_ids))
-    return results
+            results = results.union(doc_ids)
+    sorted_results = list(results)
+    sorted_results.sort(key=int)
+    return sorted_results
 
 
-def get_ranked_list(allDocuments, spimi_dictionary, query, index):
+def get_ranked_list(allDocuments, spimi_dictionary, query, index, k_one=1.2, b=0.75):
     global document_frequency
-    score = bm25_query_processing(query, allDocuments, spimi_dictionary, document_frequency)
+    score = bm25_query_processing(query, allDocuments, spimi_dictionary, document_frequency, k_one=k_one, b=b)
     # sorting from https://stackoverflow.com/questions/613183/how-do-i-sort-a-dictionary-by-value
     sorted_scores = {key: value for key, value in sorted(score.items(), key=lambda item: item[1], reverse=True)}
     with open(f'./results/scores-{index}.txt', 'w+') as file:
-        file.write(f'For query: {query}\n')
+        file.write(f'For query: {query} with k1={k_one} and b={b}\n')
         file.write(f'[ \n')
         for doc_id, doc_score in sorted_scores.items():
             file.write(f'{doc_id}, \n')
@@ -130,14 +175,12 @@ def bm25_query_processing(query, all_documents, dictionary, doc_frequency, k_one
     return score
 
 
-naive_indexer_dictionary = {}
-
-
-# Task 1; Accepts 'Documents' as a docId -> list of tokens
+# Accepts 'Documents' as a docId -> list of tokens
 def naive_indexer(documents, timed=False):
     global naive_indexer_dictionary
-    count = 0
-    if count == 10000 and timed:
+    global count_for_naive
+
+    if count_for_naive == 10000 and timed:
         return
 
     # save as word -> [listOf]
@@ -145,42 +188,33 @@ def naive_indexer(documents, timed=False):
     # add to list
     for docId, document in documents.items():
         for token in document:
-            F_list.append((docId, token))
-
-    filtered_F_list = []
-    processed_tokens = []
-    for id, token in F_list:
-        if token not in processed_tokens:
-            filtered_F_list.append((id, token))
-            processed_tokens.append(token)
+            if (docId, token) not in F_list:
+                F_list.append((docId, token))
 
     # taken and adapted from https://stackoverflow.com/questions/59687010/python-sort-list-consisting-of-int-string-pairs-descending-by-int-and-ascend
-    sorted(filtered_F_list, key=lambda x: x[1])
+    F_list = [(docId, token) for docId, token in sorted(F_list, key=lambda x: x[1])]
 
-    # sort into postings list
-    for id, token in filtered_F_list:
-        if count == 10000 and timed:
+    # add into postings list
+    for id, token in F_list:
+        if count_for_naive == 10000 and timed:
             return
         if token not in naive_indexer_dictionary.keys():
             naive_indexer_dictionary[token] = [id]
-            count = count + 1
+            count_for_naive = count_for_naive + 1
         else:
             if id not in naive_indexer_dictionary[token]:
                 naive_indexer_dictionary[token].append(id)
-                count = count + 1
+                count_for_naive = count_for_naive + 1
 
 
-spimi_dictionary = {}
-count_of_documents = 0
-
-
-# Task 1; Accepts 'Documents' as a docId -> list of tokens
+# Accepts 'Documents' as a docId -> list of tokens
 def naive_indexer_spimi(documents, timed=False):
     # save as word -> [listOf]
     global spimi_dictionary
     global count_of_documents
-    count = 0
-    if count == 10000 and timed:
+    global count_for_spimi
+
+    if count_for_spimi == 10000 and timed:
         return
 
     # add to dictionary
@@ -191,19 +225,11 @@ def naive_indexer_spimi(documents, timed=False):
                 return
             if token not in spimi_dictionary.keys():
                 spimi_dictionary[token] = [docId]
-                count = count + 1
+                count_for_spimi = count_for_spimi + 1
             else:
                 if docId not in spimi_dictionary[token]:
                     spimi_dictionary[token].append(docId)
-                    count = count + 1
-
-    # sort dictionary values
-    for key, value in spimi_dictionary.items():
-        value.sort()
-        spimi_dictionary[key] = value
-
-
-document_frequency = {}
+                    count_for_spimi = count_for_spimi + 1
 
 
 # Creates a list of documents and term frequency using positions
@@ -227,36 +253,6 @@ def single_term_query_processing(query, vocabulary):
         return []
     else:
         return doc_ids
-
-
-# Task 3; Lossy Compression; documents is a list of tokens
-def lossy_compression_table(vocabulary, stop_words_small, stop_words_big):
-    # lower cases everything
-    no_numbers_tokens = {token: vocabulary[token] for token in vocabulary if not re.search('\d', token)}
-    case_folded_tokens = {}
-    for token in no_numbers_tokens:
-        lower_case_token = token.lower()
-        if lower_case_token not in case_folded_tokens.keys():
-            case_folded_tokens[lower_case_token] = no_numbers_tokens[token]
-        else:
-            current_tokens = case_folded_tokens[lower_case_token]
-            other_tokens = no_numbers_tokens[token]
-            if current_tokens is not None and other_tokens is not None:
-                case_folded_tokens[lower_case_token] = list(set(current_tokens).union(set(other_tokens)))
-    stop_word_filtered_tokens_25 = {token: case_folded_tokens[token] for token in case_folded_tokens if token not in stop_words_small}
-    stop_word_filtered_tokens_126 = {token: stop_word_filtered_tokens_25[token] for token in stop_word_filtered_tokens_25 if token not in stop_words_big}
-    ps = nltk.stem.PorterStemmer()
-    stemmed_tokens = {}
-    for token in stop_word_filtered_tokens_126:
-        stemmed_token = ps.stem(token)
-        if stemmed_token not in stemmed_tokens.keys():
-            stemmed_tokens[stemmed_token] = stop_word_filtered_tokens_126[token]
-        else:
-            current_tokens = stemmed_tokens[stemmed_token]
-            other_tokens = stop_word_filtered_tokens_126[token]
-            if current_tokens is not None and other_tokens is not None:
-                stemmed_tokens[stemmed_token] = list(set(current_tokens).union(set(other_tokens)))
-    return stemmed_tokens
 
 
 def get_stop_words_126():
